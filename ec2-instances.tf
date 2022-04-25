@@ -6,7 +6,7 @@ resource "aws_instance" "ec2" {
   ami                  = var.ami_id
   subnet_id            = element(aws_subnet.public_subnet.*.id, count.index)
   security_groups      = [aws_security_group.security_group.id, ]
-  key_name             = "ssh_key_pair"
+  key_name             = "keys"
 #   iam_instance_profile = data.aws_iam_role.iam_role.name
 
   tags = {

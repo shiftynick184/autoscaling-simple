@@ -39,10 +39,10 @@ resource "aws_route_table" "pub_rt" {
 ### PUBLIC ROUTE ###
 
 resource "aws_route" "pub_route" {
-  count                  = length(aws_route_table.pub_rt.*.id)                  // added this line to produce correct route table format
+  count                  = length(aws_route_table.pub_rt.*.id)                  // added this line to produce correct route table
   route_table_id         = element(aws_route_table.pub_rt.*.id, count.index)    //changed from "aws_route_table.pub_rt.id"  
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = "aws_internet_gateway.igw.id"
+  gateway_id             = aws_internet_gateway.igw.id
 }
 
 ### PUBLIC ROUTE TABLE ASSOC. ###
@@ -55,17 +55,17 @@ resource "aws_route_table_association" "pub_route_table_association" {
 
 ### VPC LOGS ###
 
-resource "aws_flow_log" "vpc_flow_logs" {
-#   iam_role_arn         = data.aws_iam_role.iam_role.arn
-  log_destination_type = "cloud-watch-logs"
-  log_destination      = aws_cloudwatch_log_group.cloudwatch_log_group.arn
-  traffic_type         = "ALL"
-  vpc_id               = aws_vpc.nginx_vpc.id
-}
+# resource "aws_flow_log" "vpc_flow_logs" {
+# #   iam_role_arn         = data.aws_iam_role.iam_role.arn
+#   log_destination_type = "cloud-watch-logs"
+#   log_destination      = aws_cloudwatch_log_group.cloudwatch_log_group.arn
+#   traffic_type         = "ALL"
+#   vpc_id               = aws_vpc.nginx_vpc.id
+# }
 
-### CLOUDWATCH LOG GROUP ###
+# ### CLOUDWATCH LOG GROUP ###
 
-resource "aws_cloudwatch_log_group" "cloudwatch_log_group" {
-  name              = "VPC-FlowLogs-Group"
-  retention_in_days = 7
-}
+# resource "aws_cloudwatch_log_group" "cloudwatch_log_group" {
+#   name              = "VPC-FlowLogs-Group"
+#   retention_in_days = 7
+# }
