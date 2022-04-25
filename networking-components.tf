@@ -39,6 +39,7 @@ resource "aws_route_table" "pub_rt" {
 ### PUBLIC ROUTE ###
 
 resource "aws_route" "pub_route" {
+  count                  = length(aws_route_table.pub_rt.*.id)                  // added this line to produce correct route table format
   route_table_id         = element(aws_route_table.pub_rt.*.id, count.index)    //changed from "aws_route_table.pub_rt.id"  
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = "aws_internet_gateway.igw.id"
