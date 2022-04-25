@@ -26,7 +26,7 @@ variable "instance_type" {
 
 ### SSH KEYS ###
 variable "PRIVATE_KEY_PATH" {
-  default = "/Users/nick.bratton/keys"
+  default = "/Users/nick.bratton/private_key.pem"
 }
 
 variable "PUBLIC_KEY_PATH" {
