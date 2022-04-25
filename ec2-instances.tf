@@ -25,14 +25,14 @@ resource "null_resource" "nothingtoseehere" {
 
   // Indicates where userdata.sh provisioning file is and destination or ec2 instances once live
   provisioner "file" {
-    source      = "userdata.sh"
-    destination = "/home/ec2-user/userdata.sh"
+    source      = "user-data.sh"
+    destination = "/home/ec2-user/user-data.sh"
   }
   // Makes userdata.sh executable by converting to bash script    
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /home/ec2-user/userdata.sh",
-      "sh /home/ec2-user/userdata.sh",
+      "chmod +x /home/ec2-user/user-data.sh",
+      "sh /home/ec2-user/user-data.sh",
     ]
     on_failure = continue
   }
