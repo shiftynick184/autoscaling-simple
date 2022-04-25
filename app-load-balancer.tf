@@ -4,7 +4,7 @@ resource "aws_lb_target_group" "target_group" {
   name        = "LB-TargetGroup"
   port        = 80
   target_type = "instance"
-  protocol    = "http"
+  protocol    = "HTTP"
   vpc_id      = aws_vpc.nginx_vpc.id
 }
 
@@ -33,7 +33,7 @@ resource "aws_lb" "app_load_balancer" {
 resource "aws_lb_listener" "eavesdropper" {
   load_balancer_arn = aws_lb.app_load_balancer.arn
   port              = "80"
-  protocol          = "http"
+  protocol          = "HTTP"
 
   default_action  {
     type = "redirect"
