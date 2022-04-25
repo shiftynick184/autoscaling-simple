@@ -46,8 +46,8 @@ resource "null_resource" "nothingtoseehere" {
   }
 }
 
-### Public SSH key ###
-  key_name = aws_key_pair.keys.id
+# ### Public SSH key ###
+#   key_name = aws_key_pair.keys.id
 
 ### ELASTIC IPS ###
 
