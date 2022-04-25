@@ -23,7 +23,7 @@ resource "aws_instance" "ec2" {
 resource "null_resource" "nothingtoseehere" {
   count = length(aws_subnet.public_subnet.*.id)
 
-  // Indicates where userdata.sh provisioning file is and destination or ec2 instances once live
+  // Indicates where user-data.sh provisioning file is and destination on ec2 instances once live
   provisioner "file" {
     source      = "user-data.sh"
     destination = "/home/ec2-user/user-data.sh"
@@ -32,13 +32,14 @@ resource "null_resource" "nothingtoseehere" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /home/ec2-user/user-data.sh",
-      "sh /home/ec2-user/user-data.sh",
+      "sudo /home/ec2-user/user-data.sh",
     ]
     on_failure = continue
   }
 
   connection {
     type        = "ssh"
+    agent       = "false"
     user        = "ec2-user"
     port        = "22"
     host        = element(aws_eip.elastic.*.public_ip, count.index)
