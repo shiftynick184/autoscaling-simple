@@ -22,7 +22,7 @@ resource "aws_instance" "ec2" {
 ### Used as container for actions taken by provisioner ###
 resource "null_resource" "nothingtoseehere" {
   count = length(aws_subnet.public_subnet.*.id)
-  
+
   // Indicates where userdata.sh provisioning file is and destination or ec2 instances once live
   provisioner "file" {
     source      = "userdata.sh"
@@ -36,6 +36,9 @@ resource "null_resource" "nothingtoseehere" {
     ]
     on_failure = continue
   }
+
+### Public SSH key ###
+  key_name = aws_key_pair.keys.id
 
   connection {
     type        = "ssh"
