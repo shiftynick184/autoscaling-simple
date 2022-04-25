@@ -1,0 +1,374 @@
+/// variables.tf////
+
+### VPC ###
+variable "nginx_vpc" {
+  description = "Testing VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+### EC2 COMPONENTS###
+variable "instance_tenancy" {
+  description = "Defines tenancy of the VPC - dedicated or default"
+  type        = string
+  default     = "default"
+}
+
+variable "ami_id" {
+  description = "ami id"
+  type        = string
+  default     = "ami-0ff35fbb0a77fa5c5"
+}
+
+variable "instance_type" {
+  description = "Type of instance used during provisioning"
+  type        = string
+  default     = "t2.micro"
+}
+
+### SSH KEYS ###
+variable "PRIVATE_KEY_PATH" {
+  default = "/Users/nick.bratton/ssh_key_pair"
+}
+
+variable "PUBLIC_KEY_PATH" {
+  default = "/Users/nick.bratton/ssh_key_pair.pub"
+}
+_____________________________________________
+networking components.tf
+### VPC ###
+
+resource "aws_vpc" "nginx_vpc" {
+  cidr_block           = var.nginx_vpc
+  instance_tenancy     = var.instance_tenancy
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+}
+
+### PUBLIC SUBNETS ###
+
+resource "aws_subnet" "public_subnet" {
+  count                 = var.nginx_vpc == "10.0.0.0/16" ? 3 : 0
+  vpc_id                = aws_vpc.nginx_vpc.id
+  availability_zone = data.aws_availability_zones.azs.names[count.index]
+  cidr_block            = element(cidrsubnets(var.nginx_vpc, 8, 4, 4), count.index)
+}
+
+### INTERNET GATEWAY ###
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.nginx_vpc.id
+
+  tags = {
+    "Name" = "internet gateway"
+  }
+}
+
+### PUBLIC ROUTE TABLE ###
+
+resource "aws_route_table" "pub_rt" {
+  vpc_id = aws_vpc.nginx_vpc.id
+
+  tags = {
+    "Name" = "Public Route Table"
+  }
+}
+
+### PUBLIC ROUTE ###
+
+resource "aws_route" "pub_route" {
+  route_table_id         = "aws_route_table.pub_rt"
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = "aws_internet_gateway.igw.id"
+}
+
+### PUBLIC ROUTE TABLE ASSOC. ###
+
+resource "aws_route_table_association" "pub_route_table_association" {
+  count          = length(aws_subnet.public_subnet) == 3 ? 3 : 0
+  route_table_id = aws_route_table.pub_rt.id
+  subnet_id      = element(aws_subnet.public_subnet.*.id, count.index)
+}
+
+### VPC LOGS ###
+
+resource "aws_flow_log" "vpc_flow_logs" {
+#   iam_role_arn         = data.aws_iam_role.iam_role.arn
+  log_destination_type = "cloud-watch-logs"
+  log_destination      = aws_cloudwatch_log_group.cloudwatch_log_group.arn
+  traffic_type         = "ALL"
+  vpc_id               = aws_vpc.nginx_vpc.id
+}
+
+### CLOUDWATCH LOG GROUP ###
+
+resource "aws_cloudwatch_log_group" "cloudwatch_log_group" {
+  name              = "VPC-FlowLogs-Group"
+  retention_in_days = 7
+}
+
+_____________________________________________________
+
+security-group.tf
+
+locals {
+  ingress_rules = [{
+    name        = "https"
+    port        = 443
+    description = "Ingress rules for port 443"
+    },
+    {
+      name        = "http"
+      port        = 80
+      description = "Ingress rules for port 80"
+    },
+    {
+      name        = "ssh"
+      port        = 22
+      description = "Ingress rules for port 22"
+  }]
+
+}
+
+resource "aws_security_group" "security_group" {
+
+  name        = "Custom_security_group"
+  description = "Allow TLS inbound traffic"
+  vpc_id      = aws_vpc.nginx_vpc.id
+  egress = [
+    {
+      description      = "Security group for outgoing traffic"
+      from_port        = 0
+      to_port          = 0
+      protocol         = "-1"
+      cidr_blocks      = ["0.0.0.0/0"]
+      ipv6_cidr_blocks = ["::/0"]
+      prefix_list_ids  = []
+      security_groups  = []
+      self             = false
+    }
+  ]
+
+  dynamic "ingress" {
+    for_each = local.ingress_rules
+
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.port
+      to_port     = ingress.value.port
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+  tags = {
+    Name = "AWS security group dynamic ingress block"
+  }
+
+}
+
+_____________________________________________
+
+ec2-instance.tf
+
+### EC2 INSTANCE ###
+
+resource "aws_instance" "ec2" {
+  count                = length(aws_subnet.public_subnet.*.id)
+  instance_type        = "t2.micro"
+  ami                  = var.ami_id
+  subnet_id            = element(aws_subnet.public_subnet.*.id, count.index)
+  security_groups      = [aws_security_group.security_group.id, ]
+  key_name             = "ssh_key_pair"
+#   iam_instance_profile = data.aws_iam_role.iam_role.name
+
+  tags = {
+    "Name"        = "ec2-${count.index}"
+    "Environment" = "Test"
+    "CreatedBy"   = "Terraform"
+  }
+  timeouts {
+    create = "10m"
+  }
+}
+
+### Used as container for actions taken by provisioner ###
+resource "null_resource" "nothingtoseehere" {
+  count = length(aws_subnet.public_subnet.*.id)
+  // Indicates where userdata.sh provisioning file is and destination or ec2 instances once live
+  provisioner "file" {
+    source      = "userdata.sh"
+    destination = "/home/ec2-user/userdata.sh"
+  }
+  // Makes userdata.sh executable by converting to bash script    
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /home/ec2-user/userdata.sh",
+      "sh /home/ec2-user/userdata.sh",
+    ]
+    on_failure = continue
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    port        = "22"
+    host        = element(aws_eip.elastic.*.public_ip, count.index)
+    private_key = file("${var.PRIVATE_KEY_PATH}")
+  }
+}
+
+### ELASTIC IPS ###
+
+resource "aws_eip" "elastic" {
+  count            = length(aws_instance.ec2.*.id)
+  instance         = element(aws_instance.ec2.*.id, count.index)
+  public_ipv4_pool = "amazon"
+  vpc              = true
+
+  tags = {
+    "Name" = "eip-${count.index}"
+  }
+}
+
+### ASSOCIATING EIP W/ EC2 INSTANCES
+
+resource "aws_eip_association" "eip_association" {
+  count         = length(aws_eip.elastic)
+  instance_id   = element(aws_instance.ec2.*.id, count.index)
+  allocation_id = element(aws_eip.elastic.*.id, count.index)
+}
+
+____________________________________________
+
+data.tf
+
+### GATHER AWS AVAILABILITY ZONES FOR US-WEST-2 ###
+
+data "aws_availability_zones" "azs" {
+
+}
+
+# data "aws_iam_role" "iam_role" {
+#     name = "iam_role"
+  
+# }
+
+
+____________________________________________
+
+app-load-balancer.tf
+
+###  TARGET GROUP FOR LOAD BALANCER ###
+
+resource "aws_lb_target_group" "target_group" {
+  name        = "LB-TargetGroup"
+  port        = 80
+  target_type = "instance"
+  protocol    = "http"
+  vpc_id      = aws_vpc.nginx_vpc.id
+}
+
+### ATTACHING ARGET GROUP TO EC2S ###
+
+resource "aws_alb_target_group_attachment" "targ_group_attach" {
+  count            = length(aws_instance.ec2.*.id) == 3 ? 3 : 0
+  target_group_arn = aws_lb_target_group.target_group.arn
+  target_id        = element(aws_instance.ec2.*.id, count.index)
+}
+
+### APP LOAD BALANCER ###
+
+resource "aws_lb" "app_load_balancer" {
+  name               = "AppLoadBalancer"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.security_group.id, ]
+  subnets            = aws_subnet.public_subnet.*.id
+
+}
+
+
+### LOAD BALANCER LISTENER ###
+
+resource "aws_lb_listener" "eavesdropper" {
+  load_balancer_arn = aws_lb.app_load_balancer.arn
+  port              = "80"
+  protocol          = "http"
+
+  default_action  {
+    type = "redirect"
+
+    redirect  {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+
+
+### RULES FOR LISTENER ###
+
+resource "aws_lb_listener_rule" "static" {
+  listener_arn = aws_lb_listener.eavesdropper.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.target_group.arn
+
+  }
+
+  condition {
+    path_pattern {
+      values = ["/var/www/html/index.html"]
+    }
+  }
+}
+
+_____________________________________________________
+
+main.tf
+
+### TERRAFORM ###
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.61.0"
+    }
+  }
+}
+
+### AWS ###
+provider "aws" {
+  region  = "us-west-2"
+  version = "3.61.0"
+}
+
+
+_________________________________________________________
+
+
+output.tf
+
+output "private_ip" {
+  value = zipmap(aws_instance.ec2.*.tags.Name, aws_instance.ec2.*.private_ip)
+}
+
+output "public_ip" {
+  value = zipmap(aws_instance.ec2.*.tags.Name, aws_eip.elastic.*.public_ip)
+}
+
+output "public_dns" {
+  value = zipmap(aws_instance.ec2.*.tags.Name, aws_eip.elastic.*.public_dns)
+}
+
+output "private_dns" {
+  value = zipmap(aws_instance.ec2.*.tags.Name, aws_instance.ec2.*.private_dns)
+}
+
+output "alb_id" {
+  value = aws_lb.app_load_balancer.dns_name
+}
