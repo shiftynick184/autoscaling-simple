@@ -37,9 +37,6 @@ resource "null_resource" "nothingtoseehere" {
     on_failure = continue
   }
 
-### Public SSH key ###
-  key_name = aws_key_pair.keys.id
-
   connection {
     type        = "ssh"
     user        = "ec2-user"
@@ -48,6 +45,9 @@ resource "null_resource" "nothingtoseehere" {
     private_key = file("${var.PRIVATE_KEY_PATH}")
   }
 }
+
+### Public SSH key ###
+  key_name = aws_key_pair.keys.id
 
 ### ELASTIC IPS ###
 
