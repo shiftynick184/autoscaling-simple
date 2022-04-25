@@ -10,6 +10,6 @@ terraform {
 
 ### AWS ###
 provider "aws" {
-  region  = "us-east-1"
+  region  = "us-west-2"
   version = "3.61.0"
 }
