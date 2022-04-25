@@ -39,7 +39,7 @@ resource "aws_route_table" "pub_rt" {
 ### PUBLIC ROUTE ###
 
 resource "aws_route" "pub_route" {
-  route_table_id         = element(aws_route_table.pub_rt.*.id)    //changed from "aws_route_table.pub_rt.id"  
+  route_table_id         = element(aws_route_table.pub_rt.*.id, count.index)    //changed from "aws_route_table.pub_rt.id"  
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = "aws_internet_gateway.igw.id"
 }
