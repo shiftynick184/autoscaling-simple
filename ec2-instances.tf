@@ -7,7 +7,7 @@ resource "aws_instance" "ec2" {
   subnet_id       = element(aws_subnet.public_subnet.*.id, count.index)
   security_groups = [aws_security_group.security_group.id, ]
   key_name        = "test_key"
-  #   iam_instance_profile = data.aws_iam_role.iam_role.name
+
 
   tags = {
     "Name"        = "ec2-${count.index}"
@@ -27,13 +27,13 @@ resource "null_resource" "nothingtoseehere" {
   // Indicates where user-data.sh provisioning file is and destination on ec2 instances once live
   provisioner "file" {
     source      = "user-data.sh"
-    destination = "/home/ubuntu/user-data.sh" /// "/home/ubuntu/user-data.sh"
+    destination = "/home/ubuntu/user-data.sh" 
   }
   // Makes userdata.sh executable by converting to bash script    
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /home/ubuntu/user-data.sh",  ////home/ubuntu/user-data.sh"
-      "sudo  /home/ubuntu/user-data.sh",    ////home/ubuntu/user-data.sh"
+      "chmod +x /home/ubuntu/user-data.sh",  
+      "sudo  /home/ubuntu/user-data.sh",    
     ]
     # on_failure = continue
   }
