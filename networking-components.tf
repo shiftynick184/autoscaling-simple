@@ -10,10 +10,10 @@ resource "aws_vpc" "nginx_vpc" {
 ### PUBLIC SUBNETS ###
 
 resource "aws_subnet" "public_subnet" {
-  count                 = var.nginx_vpc == "10.0.0.0/16" ? 3 : 0
-  vpc_id                = aws_vpc.nginx_vpc.id
+  count             = var.nginx_vpc == "10.0.0.0/16" ? 3 : 0
+  vpc_id            = aws_vpc.nginx_vpc.id
   availability_zone = data.aws_availability_zones.azs.names[count.index]
-  cidr_block            = element(cidrsubnets(var.nginx_vpc, 8, 4, 4), count.index)
+  cidr_block        = element(cidrsubnets(var.nginx_vpc, 8, 4, 4), count.index)
 }
 
 ### INTERNET GATEWAY ###
@@ -39,8 +39,8 @@ resource "aws_route_table" "pub_rt" {
 ### PUBLIC ROUTE ###
 
 resource "aws_route" "pub_route" {
-  count                  = length(aws_route_table.pub_rt.*.id)                  // added this line to produce correct route table
-  route_table_id         = element(aws_route_table.pub_rt.*.id, count.index)    //changed from "aws_route_table.pub_rt.id"  
+  count                  = length(aws_route_table.pub_rt.*.id)               // added this line to produce correct route table
+  route_table_id         = element(aws_route_table.pub_rt.*.id, count.index) //changed from "aws_route_table.pub_rt.id"  
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.igw.id
 }
@@ -53,19 +53,3 @@ resource "aws_route_table_association" "pub_route_table_association" {
   subnet_id      = element(aws_subnet.public_subnet.*.id, count.index)
 }
 
-### VPC LOGS ###
-
-# resource "aws_flow_log" "vpc_flow_logs" {
-# #   iam_role_arn         = data.aws_iam_role.iam_role.arn
-#   log_destination_type = "cloud-watch-logs"
-#   log_destination      = aws_cloudwatch_log_group.cloudwatch_log_group.arn
-#   traffic_type         = "ALL"
-#   vpc_id               = aws_vpc.nginx_vpc.id
-# }
-
-# ### CLOUDWATCH LOG GROUP ###
-
-# resource "aws_cloudwatch_log_group" "cloudwatch_log_group" {
-#   name              = "VPC-FlowLogs-Group"
-#   retention_in_days = 7
-# }

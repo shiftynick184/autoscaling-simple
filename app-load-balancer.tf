@@ -35,10 +35,10 @@ resource "aws_lb_listener" "eavesdropper" {
   port              = "80"
   protocol          = "HTTP"
 
-  default_action  {
+  default_action {
     type = "redirect"
 
-    redirect  {
+    redirect {
       port        = "443"
       protocol    = "HTTPS"
       status_code = "HTTP_301"
