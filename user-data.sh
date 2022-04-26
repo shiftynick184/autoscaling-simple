@@ -1,7 +1,7 @@
 #!/bin/bash
 sudo su
-yum update -y
-yum install httpd -y
+apt-get update -y
+apt-get install httpd -y
 systemctl start httpd
 systemctl enable httpd
 echo 'Hire Me :)' >> /var/www/html/index.html

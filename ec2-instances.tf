@@ -1,13 +1,13 @@
-### EC2 INSTANCE ###
+### EC2 INSTANCE WITH UBUNTU OS###
 
 resource "aws_instance" "ec2" {
-  count                = length(aws_subnet.public_subnet.*.id)
-  instance_type        = "t2.micro"
-  ami                  = var.ami_id
-  subnet_id            = element(aws_subnet.public_subnet.*.id, count.index)
-  security_groups      = [aws_security_group.security_group.id, ]
-  key_name             = "keys"
-#   iam_instance_profile = data.aws_iam_role.iam_role.name
+  count           = length(aws_subnet.public_subnet.*.id)
+  instance_type   = "t2.micro"
+  ami             = var.ami_id
+  subnet_id       = element(aws_subnet.public_subnet.*.id, count.index)
+  security_groups = [aws_security_group.security_group.id, ]
+  key_name        = "test_key"
+  #   iam_instance_profile = data.aws_iam_role.iam_role.name
 
   tags = {
     "Name"        = "ec2-${count.index}"
@@ -17,6 +17,7 @@ resource "aws_instance" "ec2" {
   timeouts {
     create = "10m"
   }
+
 }
 
 ### Used as container for actions taken by provisioner ###
@@ -26,22 +27,24 @@ resource "null_resource" "nothingtoseehere" {
   // Indicates where user-data.sh provisioning file is and destination on ec2 instances once live
   provisioner "file" {
     source      = "user-data.sh"
-    destination = "/home/ec2-user/user-data.sh"
+    destination = "/tmp/user-data.sh" /// "/home/ubuntu/user-data.sh"
   }
   // Makes userdata.sh executable by converting to bash script    
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /home/ec2-user/user-data.sh",
-      "sudo /home/ec2-user/user-data.sh",
+      "chmod +x /tmp/user-data.sh",  ////home/ubuntu/user-data.sh"
+      "sudo  /tmp/user-data.sh",    ////home/ubuntu/user-data.sh"
     ]
-    on_failure = continue
+    # on_failure = continue
   }
+
 
   connection {
     type        = "ssh"
     agent       = "false"
-    user        = "ec2-user"
+    user        = "ubuntu"
     port        = "22"
+    timeout     = "30s"
     host        = element(aws_eip.elastic.*.public_ip, count.index)
     private_key = file("${var.PRIVATE_KEY_PATH}")
   }
