@@ -27,13 +27,13 @@ resource "null_resource" "nothingtoseehere" {
   // Indicates where user-data.sh provisioning file is and destination on ec2 instances once live
   provisioner "file" {
     source      = "user-data.sh"
-    destination = "/tmp/user-data.sh" /// "/home/ubuntu/user-data.sh"
+    destination = "/home/ubuntu/user-data.sh" /// "/home/ubuntu/user-data.sh"
   }
   // Makes userdata.sh executable by converting to bash script    
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /tmp/user-data.sh",  ////home/ubuntu/user-data.sh"
-      "sudo  /tmp/user-data.sh",    ////home/ubuntu/user-data.sh"
+      "chmod +x /home/ubuntu/user-data.sh",  ////home/ubuntu/user-data.sh"
+      "sudo  /home/ubuntu/user-data.sh",    ////home/ubuntu/user-data.sh"
     ]
     # on_failure = continue
   }
