@@ -8,7 +8,7 @@ resource "aws_lb_target_group" "target_group" {
   vpc_id      = aws_vpc.nginx_vpc.id
 }
 
-### ATTACHING ARGET GROUP TO EC2S ###
+### ATTACHING TARGET GROUP TO EC2S ###
 
 resource "aws_alb_target_group_attachment" "targ_group_attach" {
   count            = length(aws_instance.ec2.*.id) == 3 ? 3 : 0
